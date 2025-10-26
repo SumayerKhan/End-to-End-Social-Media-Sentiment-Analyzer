@@ -10,7 +10,7 @@
 
 ## 🎯 Project Overview
 
-A complete pipeline for real-time sentiment analysis of consumer electronics discussions on Reddit.
+A complete pipeline for sentiment analysis of consumer electronics discussions on Reddit, evolving into an intelligent RAG-based Q&A system.
 
 **System Components:**
 - 🤖 **Automated Collector** - GitHub Actions collects data every 3 hours ✅
@@ -18,11 +18,12 @@ A complete pipeline for real-time sentiment analysis of consumer electronics dis
 - 🧠 **Sentiment Analysis** - VADER classification system ✅
 - 🔄 **Automated Pipeline** - One-command data processing ✅
 - 🔍 **API** - REST endpoints with FastAPI *(Coming Week 4)*
-- 📊 **Dashboard** - Interactive Streamlit visualization *(Coming Week 5)*
+- 📊 **Dashboard** - Interactive Streamlit visualization *(Coming Week 5-6)*
+- 🤖 **RAG Chatbot** - Natural language Q&A system *(Coming Week 7)*
 
 **Current Progress:** ✅ Week 3 Complete | 17,479+ posts analyzed with sentiment scores
 
-**Future Vision:** Upgrade to RAG-based Q&A system for natural language queries about tech products
+**Project Goal:** Complete RAG-based Q&A system for natural language queries about tech products (Week 7)
 
 ---
 
@@ -457,36 +458,88 @@ CREATE INDEX idx_subreddit ON raw_posts(subreddit);
 
 ---
 
-## 🚀 Future Enhancements
+## 🚀 Week 7 Goal: RAG-Based Q&A System
 
-### Phase 1: REST API (Week 4)
-- FastAPI backend with OpenAPI docs
-- Query endpoints for sentiment data
-- Filtering by keyword, date, subreddit, sentiment
-- Aggregation endpoints for statistics
+### Planned Implementation
 
-### Phase 2: Dashboard (Weeks 5-6)
-- Interactive Streamlit web interface
-- Time-series sentiment trends
-- Subreddit comparison charts
-- Top posts display
-- Export functionality
+**Core Components:**
+1. **Vector Embeddings**
+   - Use sentence-transformers for semantic search
+   - Convert all 17K+ posts to vector embeddings
+   - Store in vector database (ChromaDB/Pinecone)
 
-### Phase 3: RAG System (Post-Project)
-- **Vector Embeddings:** Semantic search with sentence-transformers
-- **LLM Integration:** Claude/GPT for natural language responses
-- **RAG Pipeline:** Context-aware Q&A system
-- **Chat Interface:** Natural language queries
+2. **Retrieval System**
+   - Semantic search to find relevant posts
+   - Rank by relevance to user query
+   - Retrieve top 10-20 most relevant discussions
 
-**Target Capability:**
+3. **LLM Integration**
+   - Claude or GPT API for answer generation
+   - Context-aware responses using retrieved posts
+   - Source attribution and citations
+
+4. **Chat Interface**
+   - Natural language query input
+   - Streaming responses
+   - Display source posts with links
+   - Conversation history
+
+### Target Capability
+
+**User Query:**
 ```
-User: "Should I buy the Steam Deck or wait for Steam Deck 2?"
-
-System: [Searches 1,000+ relevant posts] → [Generates contextual answer]
-"Based on 347 recent discussions in r/SteamDeck, 73% of users 
-recommend buying now because Steam Deck 2 hasn't been announced 
-and current generation is mature with good software support..."
+"Should I buy the Steam Deck or wait for Steam Deck 2?"
 ```
+
+**System Response:**
+```
+Based on 347 recent discussions in r/SteamDeck, 73% of users 
+recommend buying now. Here's why:
+
+No Official Announcement: There's no confirmed Steam Deck 2 release 
+date. Community consensus suggests it won't arrive until at least 
+late 2026.
+
+Current Generation Maturity: The original Steam Deck has received 
+significant software improvements and has a large game compatibility 
+library.
+
+Strong Value: At $399, it's considered good value, especially with 
+recent sales dropping it to $349.
+
+Sources: 
+- r/SteamDeck discussions (347 posts, Oct 2025)
+- Average sentiment: +0.42 (positive)
+- Top concerns: Battery life (mentioned 89 times)
+```
+
+### Architecture for RAG
+
+```
+User Question
+    ↓
+Vector Search (find relevant posts)
+    ↓
+Retrieve Context (top 20 posts)
+    ↓
+LLM (Claude/GPT) + Context
+    ↓
+Generated Answer + Sources
+    ↓
+Display to User
+```
+
+---
+
+## 🔮 Future Enhancements (Post-Project)
+
+**Beyond Week 7:**
+- Multi-modal analysis (images, videos from posts)
+- Real-time sentiment tracking dashboard
+- Comparative product analysis
+- Sentiment prediction models
+- Mobile application
+- Commercial deployment
 
 ---
 
