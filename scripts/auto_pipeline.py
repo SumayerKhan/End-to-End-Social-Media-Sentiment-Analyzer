@@ -1,5 +1,3 @@
-# scripts/auto_pipeline.py
-
 """
 Automated Pipeline Orchestrator
 Runs existing scripts in sequence: Import → Analyze → Report
