@@ -34,36 +34,42 @@ BATCH_SIZE = 100
 
 
 def enrich_posts_with_sentiment(
-    posts: List[Dict[str, Any]], 
+    posts: List[Dict[str, Any]],
     analyzer: SentimentIntensityAnalyzer
 ) -> List[Dict[str, Any]]:
     """
     Add sentiment analysis to collected posts
-    
+
     This is the ONLY custom logic in this file - it bridges collection and sentiment.
-    
+
     Args:
         posts: List of post dictionaries from collector
         analyzer: VADER analyzer instance
-    
+
     Returns:
         Posts with sentiment fields added
     """
     enriched_posts = []
-    
+
     for post in posts:
         # Use shared utility to prepare text
         text = prepare_text_for_sentiment(
             title=post.get('title', ''),
             body=post.get('selftext', '')
         )
-        
+
         # Use shared utility to calculate sentiment
         sentiment = calculate_sentiment(text, analyzer)
-        
+
+        # Convert Unix timestamps to ISO 8601 format for PostgreSQL
+        if 'created_utc' in post:
+            post['created_utc'] = datetime.fromtimestamp(post['created_utc']).isoformat()
+        if 'collected_at' in post:
+            post['collected_at'] = datetime.fromtimestamp(post['collected_at']).isoformat()
+
         # Merge sentiment into post
         enriched_posts.append({**post, **sentiment})
-    
+
     return enriched_posts
 
 
