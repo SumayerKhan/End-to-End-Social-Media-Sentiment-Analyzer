@@ -3,41 +3,43 @@
 > Automated system for collecting, analyzing, and visualizing public sentiment about consumer electronics from Reddit discussions
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
-[![Database](https://img.shields.io/badge/Database-SQLite-blue.svg)]()
-[![Status](https://img.shields.io/badge/Status-Week%203%20Complete-green.svg)]()
+[![Database](https://img.shields.io/badge/Database-Supabase-green.svg)](https://supabase.com)
+[![Status](https://img.shields.io/badge/Status-Week%204%20In%20Progress-yellow.svg)]()
+[![RAG](https://img.shields.io/badge/RAG-Powered-purple.svg)]()
 
 ---
 
 ## 🎯 Project Overview
 
-A complete pipeline for sentiment analysis of consumer electronics discussions on Reddit, evolving into an intelligent RAG-based Q&A system.
+An intelligent RAG-based (Retrieval-Augmented Generation) Q&A system for analyzing consumer electronics sentiment from Reddit discussions. Ask natural language questions and get AI-powered insights backed by real community discussions.
 
 **System Components:**
 - 🤖 **Automated Collector** - GitHub Actions collects data every 3 hours ✅
-- 🗄️ **Database** - SQLite storage with sentiment scores ✅
+- 🗄️ **Cloud Database** - Supabase (PostgreSQL + pgvector) 🔄
 - 🧠 **Sentiment Analysis** - VADER classification system ✅
-- 🔄 **Automated Pipeline** - One-command data processing ✅
-- 🔍 **API** - REST endpoints with FastAPI *(Coming Week 4)*
-- 📊 **Dashboard** - Interactive Streamlit visualization *(Coming Week 5-6)*
-- 🤖 **RAG Chatbot** - Natural language Q&A system *(Coming Week 7)*
+- 🔄 **Automated Pipeline** - Fully automated data processing & embeddings 🔄
+- 🧬 **Vector Embeddings** - Semantic search with sentence-transformers *(Week 4)*
+- 🤖 **RAG System** - LLM-powered question answering *(Week 5)*
+- 💬 **Chat Interface** - Streamlit chat UI with source attribution *(Week 6)*
+- 🚀 **Cloud Deployment** - Zero-cost hosting on Streamlit Cloud *(Week 7)*
 
-**Current Progress:** ✅ Week 3 Complete | 17,479+ posts analyzed with sentiment scores
+**Current Progress:** ✅ Week 3 Complete | 🔄 Week 4: RAG Migration in Progress
 
-**Project Goal:** Complete RAG-based Q&A system for natural language queries about tech products (Week 7)
+**Current Dataset:** 31,097+ posts analyzed with sentiment scores (growing ~2,000/day)
+
+**Project Goal:** Production-ready RAG chatbot with automated data pipeline and cloud deployment
 
 ---
 
 ## 📈 Current Dataset Stats
 
-- **Total Posts:** 17,479+ (and growing)
+- **Total Posts:** 31,097+ (and growing ~2,000/day)
 - **Subreddits Monitored:** 20 consumer electronics communities
 - **Sentiment Analysis:** Complete (VADER-based classification)
-- **Sentiment Distribution:**
-  - Positive: 48.4%
-  - Negative: 20.1%
-  - Neutral: 31.5%
+- **Growth Rate:** ~14,000 posts per week
 - **Collection Method:** Official Reddit API (PRAW) - ethical and compliant
 - **Update Frequency:** Automated collection every 3 hours via GitHub Actions
+- **Database:** Migrating to Supabase for scalability
 
 ---
 
@@ -151,31 +153,48 @@ sentiment-analyzer/
 │   ├── reddit_config.py         # Reddit API configuration
 │   └── scheduler.py             # Collection scheduler
 │
-├── database/                     # Data storage ✅
-│   ├── tech_sentiment.db        # SQLite database (local only)
+├── database/                     # Legacy SQLite utilities ✅
+│   ├── tech_sentiment.db        # SQLite database (migration source)
 │   ├── check_db.py             # Database statistics viewer
 │   └── preview_data.py         # Data quality checker
 │
 ├── analyzer/                     # Sentiment analysis (Week 3) ✅
 │   ├── process_posts.py        # VADER sentiment processor
 │   ├── show_results.py         # Results visualization
-│   ├── add_sentiment_columns.py # Database schema updates
-│   └── sentiment_analyzer.py   # VADER testing utilities
+│   └── test_sentiment_analyzer.py # VADER testing utilities
+│
+├── supabase/                     # Cloud database (Week 4) 🔄
+│   ├── migrate.py              # SQLite → Supabase migration
+│   ├── schema.sql              # PostgreSQL schema with pgvector
+│   ├── client.py               # Supabase client wrapper
+│   └── sync_data.py            # Automated data sync from GitHub Actions
+│
+├── embeddings/                   # Vector embeddings (Week 4) 🔄
+│   ├── generate_embeddings.py  # Create embeddings for all posts
+│   ├── update_embeddings.py    # Incremental embedding updates
+│   └── config.py               # Embedding model configuration
+│
+├── rag/                          # RAG pipeline (Week 5) 📅
+│   ├── retriever.py            # Semantic search & ranking
+│   ├── generator.py            # LLM integration (Groq API)
+│   ├── pipeline.py             # Full RAG orchestration
+│   └── prompts.py              # Prompt templates
+│
+├── chat/                         # Chat interface (Week 6) 📅
+│   ├── app.py                  # Streamlit chat UI
+│   ├── components.py           # UI components
+│   └── chat_history.py         # Conversation management
 │
 ├── scripts/                      # Automation scripts ✅
 │   ├── auto_pipeline.py        # Complete pipeline orchestrator
-│   └── import_from_github.py   # JSON to SQLite importer
+│   └── import_from_github.py   # JSON importer (legacy)
 │
 ├── data/collected/               # JSON files from GitHub Actions
-│   └── reddit_posts_*.json     # Timestamped collections (45+ files)
+│   └── reddit_posts_*.json     # Timestamped collections (100+ files)
 │
 ├── .github/workflows/            # GitHub Actions automation ✅
-│   └── collect.yml             # Runs every 3 hours
-│
-├── api/                          # REST API (Week 4)
-├── dashboard/                    # Streamlit UI (Week 5)
-├── preprocessing/                # Text cleaning utilities
-├── tests/                        # Unit tests
+│   ├── collect.yml             # Data collection (every 3 hours)
+│   └── process_pipeline.yml    # Data processing & embeddings (every 6 hours)
 │
 ├── .env                          # Secrets (NOT in repo)
 ├── .env.example                  # Environment template
@@ -185,20 +204,26 @@ sentiment-analyzer/
 └── LICENSE                       # MIT License
 ```
 
+**Removed folders:** `api/`, `dashboard/`, `preprocessing/`, `utils/` (empty, not needed)
+
 ---
 
-## 🛠️ Technical Stack
+## 🛠️ Technical Stack (Zero-Cost Architecture)
 
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| **Language** | Python 3.13 | Core development |
-| **Reddit API** | PRAW 7.8.1 | Data collection |
-| **Database** | SQLite3 | Local data storage |
-| **Sentiment Analysis** | VADER | Text sentiment classification ✅ |
-| **Automation** | GitHub Actions | Scheduled data collection ✅ |
-| **API Framework** | FastAPI | REST API endpoints *(Week 4)* |
-| **Dashboard** | Streamlit | Interactive visualization *(Week 5)* |
-| **Visualization** | Plotly/Recharts | Charts and graphs *(Week 5)* |
+| Component | Technology | Purpose | Cost |
+|-----------|-----------|---------|------|
+| **Language** | Python 3.11+ | Core development | Free |
+| **Reddit API** | PRAW 7.8.1 | Data collection | Free |
+| **Database** | Supabase (PostgreSQL) | Cloud data storage | Free (500MB) |
+| **Vector Search** | pgvector | Semantic similarity search | Free (built-in) |
+| **Embeddings** | sentence-transformers | Text-to-vector conversion | Free (open-source) |
+| **Sentiment Analysis** | VADER | Text sentiment classification | Free |
+| **LLM** | Groq API | Answer generation | Free (30 req/min) |
+| **Chat UI** | Streamlit | Interactive chat interface | Free |
+| **Automation** | GitHub Actions | Scheduled data processing | Free |
+| **Hosting** | Streamlit Cloud | Web deployment | Free (1GB RAM) |
+
+**Total Monthly Cost:** $0.00 (Free tier limits sufficient for university project)
 
 ---
 
@@ -232,18 +257,18 @@ sentiment-analyzer/
 - [x] Modular, maintainable code structure
 - [x] Error handling and logging
 
-### 🔄 In Progress (Week 4)
-- [ ] REST API with FastAPI
-- [ ] Keyword search endpoints
-- [ ] Sentiment query endpoints
-- [ ] API documentation with OpenAPI
+### 🔄 In Progress (Week 4 - RAG Migration)
+- [ ] Migrate SQLite to Supabase (PostgreSQL + pgvector)
+- [ ] Generate vector embeddings for all 31K+ posts
+- [ ] Set up automated data sync to Supabase
+- [ ] Build semantic search foundation
 
-### 📅 Planned (Weeks 5-7)
-- [ ] Interactive Streamlit dashboard
-- [ ] Time-series sentiment visualization
-- [ ] Filtering by subreddit, date, sentiment
-- [ ] Top posts by sentiment scores
-- [ ] Testing and deployment
+### 📅 Planned (Weeks 5-7 - RAG Development)
+- [ ] **Week 5:** RAG retrieval system + Groq LLM integration
+- [ ] **Week 6:** Streamlit chat interface with source attribution
+- [ ] **Week 7:** Deployment, optimization, and presentation prep
+- [ ] Advanced features: Multi-turn conversations, sentiment-weighted retrieval
+- [ ] Zero-cost cloud deployment on Streamlit Cloud
 
 ---
 
@@ -329,14 +354,14 @@ Updated local database with sentiment scores
 
 ## 📊 Development Timeline
 
-**Week 1-2: Data Collection** ✅
+**Week 1-2: Data Collection** ✅ COMPLETE
 - Implemented Reddit API integration
 - Built continuous collector with quality filters
 - Created database schema with indexes
 - Set up GitHub Actions automation
-- Collected 17,479+ posts from 20 subreddits
+- Collected 31,097+ posts from 20 subreddits
 
-**Week 3: Sentiment Analysis** ✅
+**Week 3: Sentiment Analysis** ✅ COMPLETE
 - Integrated VADER sentiment analyzer
 - Added sentiment columns to database
 - Processed all posts with sentiment scores
@@ -344,22 +369,34 @@ Updated local database with sentiment scores
 - Built results visualization tools
 - Completed documentation
 
-**Week 4: REST API** 🔄
-- Build REST API with FastAPI
-- Create query endpoints
-- Implement filtering and search
-- Generate API documentation
+**Week 4: Cloud Migration & Embeddings** 🔄 IN PROGRESS
+- Migrate SQLite → Supabase (PostgreSQL + pgvector)
+- Generate vector embeddings for all posts
+- Set up automated GitHub Actions pipeline
+- Build semantic search infrastructure
+- Test vector similarity queries
 
-**Week 5-6: Dashboard** 📅
-- Develop Streamlit dashboard
-- Create interactive sentiment charts
-- Add filtering and search UI
-- Implement data export features
+**Week 5: RAG Pipeline** 📅 PLANNED
+- Implement retrieval system (semantic + metadata filtering)
+- Integrate Groq API for LLM responses
+- Design prompt templates for accurate answers
+- Build RAG orchestration pipeline
+- Test answer quality and relevance
 
-**Week 7: Testing & Polish** 📅
-- End-to-end testing
-- Performance optimization
-- Final presentation preparation
+**Week 6: Chat Interface** 📅 PLANNED
+- Develop Streamlit chat UI
+- Add conversation history
+- Implement source post attribution
+- Create responsive UI components
+- Deploy to Streamlit Cloud
+
+**Week 7: Optimization & Presentation** 📅 PLANNED
+- Optimize retrieval performance
+- Improve prompt engineering
+- Add advanced features (multi-turn, sentiment weighting)
+- Create demo scenarios
+- Prepare final presentation
+- Polish documentation
 
 ---
 
@@ -458,31 +495,34 @@ CREATE INDEX idx_subreddit ON raw_posts(subreddit);
 
 ---
 
-## 🚀 Week 7 Goal: RAG-Based Q&A System
+## 🤖 RAG-Based Q&A System Architecture
 
-### Planned Implementation
+### Implementation Stack
 
 **Core Components:**
-1. **Vector Embeddings**
-   - Use sentence-transformers for semantic search
-   - Convert all 17K+ posts to vector embeddings
-   - Store in vector database (ChromaDB/Pinecone)
+1. **Vector Embeddings (Week 4)**
+   - Model: `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions)
+   - 31K+ posts converted to embeddings
+   - Stored in Supabase with pgvector extension
+   - Automated embedding generation for new posts
 
-2. **Retrieval System**
-   - Semantic search to find relevant posts
-   - Rank by relevance to user query
-   - Retrieve top 10-20 most relevant discussions
+2. **Retrieval System (Week 5)**
+   - Hybrid search: Semantic (pgvector) + metadata filtering
+   - Filters: Subreddit, date range, sentiment score
+   - Ranking by cosine similarity + recency + sentiment
+   - Retrieve top 15-20 most relevant posts
 
-3. **LLM Integration**
-   - Claude or GPT API for answer generation
+3. **LLM Integration (Week 5)**
+   - Groq API with Llama 3.2/Mixtral models
    - Context-aware responses using retrieved posts
-   - Source attribution and citations
+   - Source attribution with Reddit permalinks
+   - Sentiment-weighted answer generation
 
-4. **Chat Interface**
-   - Natural language query input
-   - Streaming responses
-   - Display source posts with links
-   - Conversation history
+4. **Chat Interface (Week 6)**
+   - Streamlit chat UI with message history
+   - Real-time streaming responses (if supported)
+   - Display source posts with metadata
+   - Export conversations as markdown
 
 ### Target Capability
 
@@ -513,21 +553,46 @@ Sources:
 - Top concerns: Battery life (mentioned 89 times)
 ```
 
-### Architecture for RAG
+### System Architecture
 
 ```
-User Question
+GitHub Actions (Every 3 hours)
     ↓
-Vector Search (find relevant posts)
+Collect Reddit posts via PRAW
     ↓
-Retrieve Context (top 20 posts)
+Store in Supabase (PostgreSQL)
     ↓
-LLM (Claude/GPT) + Context
+Run VADER sentiment analysis
     ↓
-Generated Answer + Sources
+Generate embeddings (sentence-transformers)
     ↓
-Display to User
+Store vectors in Supabase (pgvector)
+
+────────────────────────────────────
+
+User Question (Streamlit Chat)
+    ↓
+Embed query (same model)
+    ↓
+Vector Search in Supabase (pgvector)
+    ↓
+Filter by metadata (date, sentiment, subreddit)
+    ↓
+Retrieve top 15-20 relevant posts
+    ↓
+Send to Groq API (Llama 3.2)
+    ↓
+Generate answer with sources
+    ↓
+Display in Streamlit UI
 ```
+
+**Deployment:**
+- **Data Pipeline:** GitHub Actions (automated, cloud)
+- **Database:** Supabase (500MB free tier)
+- **Chat App:** Streamlit Cloud (1GB RAM free tier)
+- **LLM:** Groq API (30 requests/min free tier)
+- **Total Cost:** $0/month
 
 ---
 
@@ -592,5 +657,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Last Updated:** October 26, 2025  
-**Project Status:** Week 3 Complete - Sentiment Analysis Operational ✅
+**Last Updated:** November 1, 2025
+**Project Status:** Week 4 In Progress - Migrating to RAG Architecture 🔄
+**Current Dataset:** 31,097+ posts with sentiment scores (growing ~2,000/day)

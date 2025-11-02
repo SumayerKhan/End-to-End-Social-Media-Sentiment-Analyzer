@@ -44,6 +44,10 @@ venv.bak/
 *~
 .DS_Store
 
+# Claude Code Documentation (local only)
+CLAUDE.md
+SUPABASE_MIGRATION_GUIDE.md
+
 # Database
 *.db
 *.sqlite
