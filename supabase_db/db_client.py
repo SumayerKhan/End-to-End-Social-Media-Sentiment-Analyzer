@@ -62,15 +62,15 @@ class SupabaseClient:
         Fetch posts that don't have embeddings yet
 
         Args:
-            limit: Maximum number of posts to fetch
+            limit: Maximum number of posts to fetch (default: 1000 due to Supabase limits)
 
         Returns:
             List of posts
         """
-        query = self.client.table('reddit_posts').select('*').is_('embedding', 'null')
+        if limit is None:
+            limit = 1000
 
-        if limit:
-            query = query.limit(limit)
+        query = self.client.table('reddit_posts').select('*').is_('embedding', 'null').limit(limit)
 
         response = query.execute()
         return response.data
@@ -214,7 +214,7 @@ class SupabaseClient:
             Dictionary with database stats
         """
         try:
-            response = self.client.rpc('get_database_stats').execute()
+            response = self.client.rpc('get_database_stats', {}).execute()
             return response.data[0] if response.data else {}
         except Exception as e:
             print(f"Error getting stats: {e}")
