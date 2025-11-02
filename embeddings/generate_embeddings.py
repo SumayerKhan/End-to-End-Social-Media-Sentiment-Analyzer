@@ -14,6 +14,7 @@ from typing import List, Dict, Any
 sys.path.append(str(Path(__file__).parent.parent))
 
 from sentence_transformers import SentenceTransformer
+import torch
 from supabase_db.db_client import get_client
 from embeddings.config import (
     EMBEDDING_MODEL,

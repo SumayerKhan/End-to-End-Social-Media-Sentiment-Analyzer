@@ -23,7 +23,7 @@ An intelligent RAG-based (Retrieval-Augmented Generation) Q&A system for analyzi
 - 💬 **Chat Interface** - Streamlit chat UI with source attribution *(Week 6)*
 - 🚀 **Cloud Deployment** - Zero-cost hosting on Streamlit Cloud *(Week 7)*
 
-**Current Progress:** ✅ Week 4 Complete | 📅 Week 5: RAG Pipeline Development
+**Current Progress:** ✅ Week 4 Complete (with automated embeddings) | 📅 Week 5: RAG Pipeline Development
 
 **Current Dataset:** 38,000+ posts in Supabase with sentiment scores (growing ~7,200/day)
 
@@ -157,10 +157,11 @@ End-to-end sentiment analyzer/
 │   ├── schema.sql                    # PostgreSQL schema with pgvector
 │   └── test_connection.py            # Connection verification utility
 │
-├── embeddings/                        # Vector embeddings (Week 5) 📅
+├── embeddings/                        # Vector embeddings (Week 4) ✅
 │   ├── __init__.py
 │   ├── config.py                     # Embedding model configuration
-│   └── generate_embeddings.py        # Create embeddings for posts
+│   ├── embedding_utils.py            # Shared embedding utilities (reusable)
+│   └── generate_embeddings.py        # Batch embedding generation (backfilling)
 │
 ├── analyzer/                          # Sentiment analysis (Week 3) ✅
 │   ├── __init__.py
@@ -272,20 +273,25 @@ End-to-end sentiment analyzer/
 - [x] Modular, maintainable code structure
 - [x] Error handling and logging
 
-### ✅ Week 4 Complete (Nov 1-7, 2025) - Cloud Migration & Automation
+### ✅ Week 4 Complete (Nov 1-7, 2025) - Cloud Migration & Automated Pipeline
 - [x] Migrated 31,097 posts from SQLite to Supabase (PostgreSQL + pgvector)
 - [x] Set up automated GitHub Actions → Supabase direct insertion pipeline
 - [x] Implemented automated VADER sentiment analysis in pipeline
+- [x] **Added automated embedding generation (sentence-transformers)**
+- [x] Created modular embedding utilities with zero code duplication
 - [x] Created database monitoring and statistics tools
 - [x] Achieved stable automation: ~900 new posts every 3 hours (~7,200/day)
 - [x] Database grew from 31K to 38K+ posts during Week 4
+- [x] Pipeline now: Collect → Sentiment → Embeddings → Insert
 
 ### 📅 Planned (Weeks 5-7 - RAG Development)
-- [ ] **Week 5:** RAG retrieval system + Groq LLM integration
+- [ ] **Week 5:** RAG retrieval system + Groq LLM integration (embeddings ready!)
 - [ ] **Week 6:** Streamlit chat interface with source attribution
 - [ ] **Week 7:** Deployment, optimization, and presentation prep
 - [ ] Advanced features: Multi-turn conversations, sentiment-weighted retrieval
 - [ ] Zero-cost cloud deployment on Streamlit Cloud
+
+**Note:** Embeddings are now generated automatically during collection, so Week 5 can focus entirely on RAG retrieval and LLM integration!
 
 ---
 
@@ -376,7 +382,7 @@ CREATE INDEX ON reddit_posts USING ivfflat (embedding vector_cosine_ops);
 
 ## 🔄 Automated Pipeline
 
-### System Architecture (Current - Week 4)
+### System Architecture (Current - Week 4 + Embeddings)
 
 ```
 GitHub Actions (Cloud - Every 3 hours)
@@ -385,12 +391,15 @@ GitHub Actions (Cloud - Every 3 hours)
     ↓
 2. Run VADER sentiment analysis
     ↓
-3. Insert directly to Supabase (PostgreSQL)
+3. Generate vector embeddings (sentence-transformers) ⭐ NEW
+    ↓
+4. Insert to Supabase (PostgreSQL)
     ↓
     [Supabase Cloud Database]
-    ├─→ 38,000+ posts with sentiment scores
+    ├─→ 38,000+ posts with sentiment scores + embeddings
     ├─→ Automated deduplication (PRIMARY KEY)
     ├─→ PostgreSQL with pgvector extension
+    ├─→ 384-dimensional embeddings ready for RAG
     └─→ Growing ~900 posts every 3 hours
 ```
 
@@ -405,7 +414,9 @@ GitHub Actions (Cloud - Every 3 hours)
 - ✅ Accessible from anywhere
 
 **Key Files:**
-- `collector/supabase_pipeline.py` - Runs in GitHub Actions (collection + sentiment + insertion)
+- `collector/supabase_pipeline.py` - Runs in GitHub Actions (collection + sentiment + embeddings + insertion)
+- `embeddings/embedding_utils.py` - Shared embedding utilities (zero duplication)
+- `embeddings/generate_embeddings.py` - Batch embedding generation (for backfilling)
 - `supabase_db/db_client.py` - Supabase client wrapper with helper methods
 - `scripts/check_database.py` - Database monitoring and statistics
 - `scripts/log_database_size.py` - Growth tracking (runs in GitHub Actions)
@@ -429,13 +440,16 @@ GitHub Actions (Cloud - Every 3 hours)
 - Built results visualization tools
 - Completed documentation
 
-**Week 4: Cloud Migration & Automation** ✅ COMPLETE
+**Week 4: Cloud Migration & Automated Pipeline** ✅ COMPLETE
 - Migrated 31,097 posts from SQLite to Supabase (PostgreSQL + pgvector)
 - Set up automated GitHub Actions → Supabase direct insertion pipeline
 - Implemented automated VADER sentiment analysis in collection pipeline
+- **Added automated embedding generation with sentence-transformers**
+- Created modular embedding utilities (embedding_utils.py)
 - Built database monitoring and statistics tools (check_database.py)
 - Achieved stable automation: ~900 new posts every 3 hours
 - Database grew from 31K to 38K+ posts during Week 4
+- Full pipeline: Collect → Sentiment → Embeddings → Insert
 
 **Week 5: RAG Pipeline** 📅 PLANNED
 - Implement retrieval system (semantic + metadata filtering)
@@ -700,5 +714,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Last Updated:** November 2, 2025
-**Project Status:** Week 4 Complete - Ready for RAG Development ✅
-**Current Dataset:** 38,000+ posts in Supabase (growing ~7,200/day via automated pipeline)
+**Project Status:** Week 4 Complete (with automated embeddings) - Ready for RAG Development ✅
+**Current Dataset:** 38,000+ posts in Supabase with sentiment + embeddings (growing ~7,200/day)
+**Pipeline:** Collect → Sentiment → Embeddings → Insert (fully automated every 3 hours)
