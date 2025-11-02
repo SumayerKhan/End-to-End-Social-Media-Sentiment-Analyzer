@@ -1,5 +1,8 @@
 """
 Generate vector embeddings for all posts in Supabase
+
+This script processes existing posts in batches to generate embeddings.
+For inline embedding generation during collection, see collector/supabase_pipeline.py
 """
 
 import sys
@@ -11,7 +14,6 @@ from typing import List, Dict, Any
 sys.path.append(str(Path(__file__).parent.parent))
 
 from sentence_transformers import SentenceTransformer
-import torch
 from supabase_db.db_client import get_client
 from embeddings.config import (
     EMBEDDING_MODEL,
@@ -19,71 +21,43 @@ from embeddings.config import (
     EMBEDDING_BATCH_SIZE,
     UPDATE_BATCH_SIZE,
     MAX_TEXT_LENGTH,
-    COMBINE_TITLE_BODY,
     DEVICE,
     SHOW_PROGRESS
+)
+from embeddings.embedding_utils import (
+    prepare_text_for_embedding,
+    generate_embeddings_batch
 )
 
 
 class EmbeddingGenerator:
-    """Generate embeddings for Reddit posts"""
+    """
+    Generate embeddings for Reddit posts in Supabase
+
+    This class handles batch processing of existing posts.
+    All embedding logic is delegated to embedding_utils for reusability.
+    """
 
     def __init__(self):
-        """Initialize embedding generator"""
-        print(f"Loading model: {EMBEDDING_MODEL}")
+        """Initialize embedding generator with model and database client"""
+        print(f"[INIT] Loading model: {EMBEDDING_MODEL}")
         self.model = SentenceTransformer(EMBEDDING_MODEL, device=DEVICE)
-        print(f"Model loaded! Embedding dimension: {EMBEDDING_DIMENSION}")
+        print(f"[OK] Model loaded! Embedding dimension: {EMBEDDING_DIMENSION}")
 
         self.supabase = get_client()
-
-    def prepare_text(self, post: Dict[str, Any]) -> str:
-        """
-        Prepare text for embedding
-
-        Args:
-            post: Post dictionary
-
-        Returns:
-            Prepared text string
-        """
-        if COMBINE_TITLE_BODY:
-            # Combine title and selftext
-            title = post.get('title', '')
-            selftext = post.get('selftext', '') or ''
-
-            # Truncate if too long
-            text = f"{title}\n{selftext}"
-            if len(text) > MAX_TEXT_LENGTH:
-                text = text[:MAX_TEXT_LENGTH]
-
-            return text
-        else:
-            # Just use title
-            return post.get('title', '')[:MAX_TEXT_LENGTH]
-
-    def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
-        """
-        Generate embeddings for a batch of texts
-
-        Args:
-            texts: List of text strings
-
-        Returns:
-            List of embedding vectors
-        """
-        embeddings = self.model.encode(
-            texts,
-            batch_size=EMBEDDING_BATCH_SIZE,
-            show_progress_bar=SHOW_PROGRESS,
-            convert_to_numpy=True
-        )
-
-        # Convert to list of lists
-        return embeddings.tolist()
+        print(f"[OK] Supabase client ready")
 
     def process_all_posts(self):
-        """Generate embeddings for all posts without embeddings"""
-        print("\nFetching posts without embeddings...")
+        """
+        Generate embeddings for all posts without embeddings
+
+        This method:
+        1. Fetches posts missing embeddings from Supabase
+        2. Prepares texts using shared utility
+        3. Generates embeddings in batches using shared utility
+        4. Uploads embeddings back to Supabase
+        """
+        print("\n[1/4] Fetching posts without embeddings...")
         posts = self.supabase.get_posts_without_embeddings()
         total_posts = len(posts)
 
@@ -91,26 +65,39 @@ class EmbeddingGenerator:
             print("[OK] All posts already have embeddings!")
             return
 
-        print(f"Found {total_posts:,} posts to process\n")
+        print(f"[OK] Found {total_posts:,} posts to process\n")
 
-        # Prepare texts
-        print("Preparing texts...")
-        texts = [self.prepare_text(post) for post in posts]
+        # Prepare texts using shared utility
+        print("[2/4] Preparing texts...")
+        texts = [
+            prepare_text_for_embedding(
+                title=post.get('title', ''),
+                body=post.get('selftext', ''),
+                max_length=MAX_TEXT_LENGTH
+            )
+            for post in posts
+        ]
+        print(f"[OK] Prepared {len(texts):,} texts")
 
-        # Generate embeddings
-        print(f"Generating embeddings in batches of {EMBEDDING_BATCH_SIZE}...")
+        # Generate embeddings using shared utility
+        print(f"\n[3/4] Generating embeddings (batch size: {EMBEDDING_BATCH_SIZE})...")
         start_time = time.time()
 
-        embeddings = self.generate_embeddings(texts)
+        embeddings = generate_embeddings_batch(
+            texts=texts,
+            model=self.model,
+            batch_size=EMBEDDING_BATCH_SIZE,
+            show_progress=SHOW_PROGRESS
+        )
 
         embedding_time = time.time() - start_time
         posts_per_second = total_posts / embedding_time
 
-        print(f"\n[OK] Generated {total_posts:,} embeddings in {embedding_time:.1f}s")
+        print(f"[OK] Generated {total_posts:,} embeddings in {embedding_time:.1f}s")
         print(f"[SPEED] ~{posts_per_second:.0f} posts/second")
 
         # Prepare updates
-        print("\nPreparing updates...")
+        print("\n[4/4] Uploading embeddings to Supabase...")
         updates = [
             {
                 'post_id': posts[i]['post_id'],
@@ -118,19 +105,20 @@ class EmbeddingGenerator:
             }
             for i in range(total_posts)
         ]
+        print(f"[OK] Prepared {len(updates):,} updates")
 
-        # Upload to Supabase
-        print(f"Uploading to Supabase in batches of {UPDATE_BATCH_SIZE}...")
+        # Upload to Supabase in batches
         upload_start = time.time()
-
         total_batches = (total_posts + UPDATE_BATCH_SIZE - 1) // UPDATE_BATCH_SIZE
         success_count = 0
+
+        print(f"[UPLOAD] Processing in batches of {UPDATE_BATCH_SIZE}...")
 
         for i in range(0, total_posts, UPDATE_BATCH_SIZE):
             batch = updates[i:i + UPDATE_BATCH_SIZE]
             batch_num = i // UPDATE_BATCH_SIZE + 1
 
-            # Show progress
+            # Show progress bar
             progress = (i + len(batch)) / total_posts * 100
             bar_length = 40
             filled = int(bar_length * progress / 100)
@@ -142,22 +130,23 @@ class EmbeddingGenerator:
                 result = self.supabase.update_embeddings(batch, batch_size=len(batch))
                 success_count += result['success']
             except Exception as e:
-                print(f"\nError in batch {batch_num}: {e}")
+                print(f"\n[ERROR] Batch {batch_num} failed: {e}")
 
         print()  # New line after progress bar
 
         upload_time = time.time() - upload_start
         total_time = time.time() - start_time
 
-        # Print summary
+        # Print final summary
         print("\n" + "="*60)
-        print("Embedding generation complete!")
+        print("EMBEDDING GENERATION COMPLETE")
         print("="*60)
-        print(f"[OK] Processed: {success_count:,} posts")
-        print(f"[TIME] Embedding time: {int(embedding_time//60)}m {int(embedding_time%60)}s")
-        print(f"[TIME] Upload time: {int(upload_time//60)}m {int(upload_time%60)}s")
+        print(f"[OK] Successfully processed: {success_count:,} posts")
+        print(f"[TIME] Embedding generation: {int(embedding_time//60)}m {int(embedding_time%60)}s")
+        print(f"[TIME] Database upload: {int(upload_time//60)}m {int(upload_time%60)}s")
         print(f"[TIME] Total time: {int(total_time//60)}m {int(total_time%60)}s")
-        print(f"[SPEED] Average: ~{success_count/total_time:.0f} posts/second")
+        print(f"[SPEED] Overall: ~{success_count/total_time:.0f} posts/second")
+        print("="*60)
 
     def generate_for_new_posts(self, post_ids: List[str] = None):
         """
@@ -165,40 +154,63 @@ class EmbeddingGenerator:
 
         Args:
             post_ids: Optional list of post IDs to process
+
+        Note:
+            If no post_ids provided, processes all posts without embeddings.
+            For inline embedding during collection, use collector/supabase_pipeline.py
         """
         if post_ids:
-            print(f"Generating embeddings for {len(post_ids)} specific posts...")
-            # TODO: Implement fetching specific posts
-        else:
-            # Process all posts without embeddings
-            self.process_all_posts()
+            print(f"[INFO] Generating embeddings for {len(post_ids)} specific posts...")
+            # TODO: Implement fetching and processing specific posts by ID
+            print("[WARNING] Specific post ID processing not yet implemented")
+            print("[INFO] Falling back to processing all posts without embeddings")
+
+        # Process all posts without embeddings
+        self.process_all_posts()
 
 
 def main():
-    """Main function"""
+    """
+    Main entry point for batch embedding generation
+
+    This script is used for:
+    1. Initial embedding generation for all existing posts
+    2. Backfilling embeddings for posts that don't have them
+    3. Manual re-generation of embeddings if needed
+
+    For automated embedding generation during collection:
+    See collector/supabase_pipeline.py
+    """
+    print("="*60)
+    print("BATCH EMBEDDING GENERATION")
+    print("="*60)
+
     try:
+        # Initialize and run generator
         generator = EmbeddingGenerator()
         generator.process_all_posts()
 
-        # Show stats
+        # Display final database statistics
         print("\n" + "="*60)
-        print("Database Statistics:")
+        print("DATABASE STATISTICS")
         print("="*60)
         stats = generator.supabase.get_stats()
         if stats:
-            print(f"Total posts: {stats.get('total_posts', 0):,}")
-            print(f"Posts with embeddings: {stats.get('posts_with_embeddings', 0):,}")
-            print(f"Coverage: {stats.get('posts_with_embeddings', 0) / stats.get('total_posts', 1) * 100:.1f}%")
+            total = stats.get('total_posts', 0)
+            with_embeddings = stats.get('posts_with_embeddings', 0)
+            coverage = (with_embeddings / total * 100) if total > 0 else 0
+
+            print(f"Total posts:          {total:,}")
+            print(f"Posts with embeddings: {with_embeddings:,}")
+            print(f"Coverage:             {coverage:.1f}%")
 
         print("\n[OK] Embedding generation completed successfully!")
-        print("\n[NOTE] Next steps:")
-        print("   1. Test search: python supabase_db/test_search.py")
-        print("   2. Build RAG pipeline: rag/retriever.py")
-        print("   3. Integrate LLM: rag/generator.py")
 
     except Exception as e:
         print(f"\n[ERROR] Embedding generation failed: {e}")
-        raise
+        import traceback
+        traceback.print_exc()
+        exit(1)
 
 
 if __name__ == "__main__":

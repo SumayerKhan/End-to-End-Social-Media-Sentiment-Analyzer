@@ -1,9 +1,16 @@
 """
 Unified Supabase Pipeline for GitHub Actions
-Orchestrates: Collection → Sentiment Analysis → Embedding Generation
+Orchestrates: Collection → Sentiment Analysis → Embedding Generation → Insertion
 
 This file is a pure orchestrator - all logic is imported from existing modules.
 Zero duplication. Maximum maintainability.
+
+Pipeline Steps:
+1. Collect posts from Reddit (delegates to collector.github_collector)
+2. Add sentiment analysis (delegates to analyzer.sentiment_utils)
+3. Generate embeddings (delegates to embeddings.embedding_utils)
+4. Insert to Supabase (delegates to supabase_db.db_client)
+5. Report statistics
 """
 
 import os
@@ -18,19 +25,35 @@ from collections import Counter
 sys.path.append(str(Path(__file__).parent.parent))
 
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from sentence_transformers import SentenceTransformer
 from supabase_db.db_client import get_client
 from reddit_config import get_reddit_client
 
-# Import ALL existing functions - ZERO duplication
+# Import collector functions
 from collector.github_collector import (
     collect_from_subreddit,
     SUBREDDITS,
     FEED_LIMITS
 )
-from analyzer.sentiment_utils import calculate_sentiment, prepare_text_for_sentiment
+
+# Import sentiment utilities
+from analyzer.sentiment_utils import (
+    calculate_sentiment,
+    prepare_text_for_sentiment
+)
+
+# Import embedding utilities
+from embeddings.embedding_utils import enrich_posts_with_embeddings
+from embeddings.config import (
+    EMBEDDING_MODEL,
+    EMBEDDING_BATCH_SIZE,
+    MAX_TEXT_LENGTH,
+    DEVICE
+)
 
 # Configuration
 BATCH_SIZE = 100
+ENABLE_EMBEDDINGS = True  # Toggle automated embedding generation
 
 
 def enrich_posts_with_sentiment(
@@ -76,8 +99,7 @@ def enrich_posts_with_sentiment(
 def collect_all_posts(reddit) -> List[Dict[str, Any]]:
     """
     Collect posts from all configured subreddits
-    Pure orchestration - delegates to existing collector
-
+    
     Args:
         reddit: Reddit client instance
 
@@ -176,51 +198,85 @@ def print_statistics(supabase, collected_posts: List[Dict[str, Any]]):
 def main():
     """
     Main pipeline orchestrator
-    
+
     This is a pure orchestration function - it has NO business logic.
     All work is delegated to imported modules.
-    
+
     Steps:
-    1. Initialize clients (Reddit, Supabase, VADER)
+    1. Initialize clients (Reddit, Supabase, VADER, Embedding Model)
     2. Collect posts (delegates to github_collector)
     3. Analyze sentiment (delegates to sentiment_utils)
-    4. Insert to database (delegates to db_client)
-    5. Report statistics
+    4. Generate embeddings (delegates to embedding_utils) - OPTIONAL
+    5. Insert to database (delegates to db_client)
+    6. Report statistics
 
-    Note: Embeddings are generated manually via embeddings/generate_embeddings.py
+    Note:
+    - ENABLE_EMBEDDINGS flag controls whether embeddings are generated inline
+    - Embeddings can also be generated in batch via embeddings/generate_embeddings.py
     """
     print("="*60)
     print("SUPABASE PIPELINE - AUTOMATED COLLECTION")
     print(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Embedding Generation: {'ENABLED' if ENABLE_EMBEDDINGS else 'DISABLED'}")
     print("="*60)
 
+    embedding_model = None
+
     try:
-        # [1] Initialize
-        print("\n[1/4] Initializing clients...")
+        # [1] Initialize clients
+        step_count = 5 if ENABLE_EMBEDDINGS else 4
+        print(f"\n[1/{step_count}] Initializing clients...")
         reddit = get_reddit_client()
         supabase = get_client()
         analyzer = SentimentIntensityAnalyzer()
         print("[OK] Reddit, Supabase, and VADER ready")
 
-        # [2] Collect
-        print("\n[2/4] Collecting posts...")
+        # Initialize embedding model if enabled
+        if ENABLE_EMBEDDINGS:
+            print(f"[INIT] Loading embedding model: {EMBEDDING_MODEL}")
+            embedding_model = SentenceTransformer(EMBEDDING_MODEL, device=DEVICE)
+            print(f"[OK] Embedding model loaded (dimension: 384)")
+
+        # [2] Collect posts
+        print(f"\n[2/{step_count}] Collecting posts...")
         raw_posts = collect_all_posts(reddit)
 
         if not raw_posts:
             print("\n[WARNING] No posts collected! Exiting.")
             return
 
-        # [3] Analyze
-        print("\n[3/4] Analyzing sentiment...")
+        # [3] Analyze sentiment
+        print(f"\n[3/{step_count}] Analyzing sentiment...")
         posts_with_sentiment = enrich_posts_with_sentiment(raw_posts, analyzer)
         print(f"[OK] Analyzed sentiment for {len(posts_with_sentiment):,} posts")
 
-        # [4] Insert
-        print("\n[4/4] Inserting to database...")
-        insert_posts_to_supabase(supabase, posts_with_sentiment)
+        # [4] Generate embeddings (optional)
+        if ENABLE_EMBEDDINGS and embedding_model:
+            print(f"\n[4/{step_count}] Generating embeddings...")
+            start_time = time.time()
 
-        # [5] Report
-        print_statistics(supabase, posts_with_sentiment)
+            posts_with_embeddings = enrich_posts_with_embeddings(
+                posts=posts_with_sentiment,
+                model=embedding_model,
+                batch_size=EMBEDDING_BATCH_SIZE,
+                max_length=MAX_TEXT_LENGTH,
+                show_progress=False  # Disable progress bar in GitHub Actions
+            )
+
+            embedding_time = time.time() - start_time
+            print(f"[OK] Generated {len(posts_with_embeddings):,} embeddings in {embedding_time:.1f}s")
+            print(f"[SPEED] ~{len(posts_with_embeddings)/embedding_time:.0f} posts/second")
+
+            final_posts = posts_with_embeddings
+        else:
+            final_posts = posts_with_sentiment
+
+        # [5] Insert to database
+        print(f"\n[{step_count}/{step_count}] Inserting to database...")
+        insert_posts_to_supabase(supabase, final_posts)
+
+        # [6] Report statistics
+        print_statistics(supabase, final_posts)
 
         print("\n" + "="*60)
         print("PIPELINE COMPLETE")
