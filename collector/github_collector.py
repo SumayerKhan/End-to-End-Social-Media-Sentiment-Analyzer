@@ -90,7 +90,6 @@ def collect_from_subreddit(reddit, subreddit_name):
                     'num_comments': post.num_comments,
                     'url': post.url,
                     'permalink': post.permalink,
-                    'feed_type': feed_type,
                     'collected_at': time.time()
                 }
                 

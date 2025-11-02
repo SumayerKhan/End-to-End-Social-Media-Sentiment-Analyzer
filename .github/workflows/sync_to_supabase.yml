@@ -34,6 +34,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install praw python-dotenv vaderSentiment supabase
 
+      - name: Log database size (before)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          echo "📊 Database size before collection:"
+          python scripts/log_database_size.py
+
       - name: Run Supabase pipeline
         env:
           # Reddit API credentials
@@ -47,6 +55,15 @@ jobs:
 
         run: |
           python collector/supabase_pipeline.py
+
+      - name: Log database size (after)
+        if: success()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          echo "📊 Database size after collection:"
+          python scripts/log_database_size.py
 
       - name: Show completion summary
         if: success()
