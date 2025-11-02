@@ -7,11 +7,6 @@ on:
 
   # Allow manual trigger from GitHub UI
   workflow_dispatch:
-    inputs:
-      generate_embeddings:
-        description: 'Generate embeddings for new posts (true/false)'
-        required: false
-        default: 'false'
 
 jobs:
   collect-and-sync:
@@ -38,10 +33,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install praw python-dotenv vaderSentiment supabase
-          # Only install embedding dependencies if needed
-          if [ "${{ github.event.inputs.generate_embeddings }}" = "true" ]; then
-            pip install sentence-transformers torch --extra-index-url https://download.pytorch.org/whl/cpu
-          fi
 
       - name: Run Supabase pipeline
         env:
@@ -53,9 +44,6 @@ jobs:
           # Supabase credentials
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-
-          # Optional: Generate embeddings (resource-intensive, only enable if needed)
-          GENERATE_EMBEDDINGS: ${{ github.event.inputs.generate_embeddings || 'false' }}
 
         run: |
           python collector/supabase_pipeline.py

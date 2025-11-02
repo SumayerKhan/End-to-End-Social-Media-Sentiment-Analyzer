@@ -27,12 +27,10 @@ from collector.github_collector import (
     SUBREDDITS,
     FEED_LIMITS
 )
-from embeddings.generate_embeddings import EmbeddingGenerator
 from analyzer.sentiment_utils import calculate_sentiment, prepare_text_for_sentiment
 
 # Configuration
 BATCH_SIZE = 100
-GENERATE_EMBEDDINGS = os.getenv('GENERATE_EMBEDDINGS', 'false').lower() == 'true'
 
 
 def enrich_posts_with_sentiment(
@@ -113,30 +111,6 @@ def insert_posts_to_supabase(supabase, posts: List[Dict[str, Any]]) -> Dict[str,
     return result
 
 
-def generate_embeddings_if_enabled(supabase):
-    """
-    Generate embeddings for posts without them (if enabled)
-    Pure orchestration - delegates to existing generator
-    
-    Args:
-        supabase: Supabase client (unused, kept for API consistency)
-    """
-    print(f"\n[EMBEDDINGS] Checking embedding status...")
-    
-    if not GENERATE_EMBEDDINGS:
-        print("[SKIP] Embedding generation disabled")
-        print("[INFO] Set GENERATE_EMBEDDINGS=true to enable")
-        return
-    
-    try:
-        print("[RUNNING] Generating embeddings for new posts...")
-        generator = EmbeddingGenerator()
-        generator.process_all_posts()
-        print("[OK] Embedding generation complete")
-        
-    except Exception as e:
-        print(f"[WARNING] Embedding generation failed: {e}")
-        print("[INFO] Embeddings can be generated later")
 
 
 def print_statistics(supabase, collected_posts: List[Dict[str, Any]]):
@@ -188,8 +162,9 @@ def main():
     2. Collect posts (delegates to github_collector)
     3. Analyze sentiment (delegates to sentiment_utils)
     4. Insert to database (delegates to db_client)
-    5. Generate embeddings (delegates to generate_embeddings)
-    6. Report statistics
+    5. Report statistics
+
+    Note: Embeddings are generated manually via embeddings/generate_embeddings.py
     """
     print("="*60)
     print("SUPABASE PIPELINE - AUTOMATED COLLECTION")
@@ -198,34 +173,30 @@ def main():
 
     try:
         # [1] Initialize
-        print("\n[1/5] Initializing clients...")
+        print("\n[1/4] Initializing clients...")
         reddit = get_reddit_client()
         supabase = get_client()
         analyzer = SentimentIntensityAnalyzer()
         print("[OK] Reddit, Supabase, and VADER ready")
 
         # [2] Collect
-        print("\n[2/5] Collecting posts...")
+        print("\n[2/4] Collecting posts...")
         raw_posts = collect_all_posts(reddit)
-        
+
         if not raw_posts:
             print("\n[WARNING] No posts collected! Exiting.")
             return
 
         # [3] Analyze
-        print("\n[3/5] Analyzing sentiment...")
+        print("\n[3/4] Analyzing sentiment...")
         posts_with_sentiment = enrich_posts_with_sentiment(raw_posts, analyzer)
         print(f"[OK] Analyzed sentiment for {len(posts_with_sentiment):,} posts")
 
         # [4] Insert
-        print("\n[4/5] Inserting to database...")
+        print("\n[4/4] Inserting to database...")
         insert_posts_to_supabase(supabase, posts_with_sentiment)
 
-        # [5] Embed
-        print("\n[5/5] Processing embeddings...")
-        generate_embeddings_if_enabled(supabase)
-
-        # [6] Report
+        # [5] Report
         print_statistics(supabase, posts_with_sentiment)
 
         print("\n" + "="*60)
