@@ -77,23 +77,40 @@ def collect_all_posts(reddit) -> List[Dict[str, Any]]:
     """
     Collect posts from all configured subreddits
     Pure orchestration - delegates to existing collector
-    
+
     Args:
         reddit: Reddit client instance
-    
+
     Returns:
-        List of collected posts (raw, no sentiment)
+        List of collected posts (raw, no sentiment), deduplicated by post_id
     """
     print("\n[COLLECTION] Gathering posts from subreddits...")
     all_posts = []
-    
+
     for subreddit_name in SUBREDDITS:
         posts = collect_from_subreddit(reddit, subreddit_name)
         all_posts.extend(posts)
         time.sleep(2)  # Rate limiting
-    
+
+    # Deduplicate by post_id (same post can appear in new/hot/rising feeds)
+    seen_ids = set()
+    unique_posts = []
+    duplicates = 0
+
+    for post in all_posts:
+        post_id = post.get('post_id')
+        if post_id not in seen_ids:
+            seen_ids.add(post_id)
+            unique_posts.append(post)
+        else:
+            duplicates += 1
+
     print(f"[OK] Collected {len(all_posts):,} posts total")
-    return all_posts
+    if duplicates > 0:
+        print(f"[INFO] Removed {duplicates:,} duplicate posts from same collection")
+    print(f"[OK] {len(unique_posts):,} unique posts ready for insertion")
+
+    return unique_posts
 
 
 def insert_posts_to_supabase(supabase, posts: List[Dict[str, Any]]) -> Dict[str, int]:
