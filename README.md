@@ -25,7 +25,7 @@ An intelligent RAG-based (Retrieval-Augmented Generation) Q&A system for analyzi
 
 **Current Progress:** ✅ Week 4 Complete | 📅 Week 5: RAG Pipeline Development
 
-**Current Dataset:** 31,097+ posts analyzed with sentiment scores (growing ~2,000/day)
+**Current Dataset:** 38,000+ posts in Supabase with sentiment scores (growing ~7,200/day)
 
 **Project Goal:** Production-ready RAG chatbot with automated data pipeline and cloud deployment
 
@@ -33,23 +33,23 @@ An intelligent RAG-based (Retrieval-Augmented Generation) Q&A system for analyzi
 
 ## 📈 Current Dataset Stats
 
-- **Total Posts:** 31,097+ (and growing ~2,000/day)
+- **Total Posts:** 38,000+ (and growing ~7,200/day)
 - **Subreddits Monitored:** 20 consumer electronics communities
 - **Sentiment Analysis:** Complete (VADER-based classification)
-- **Growth Rate:** ~14,000 posts per week
+- **Growth Rate:** ~900 new posts every 3 hours (automated)
 - **Collection Method:** Official Reddit API (PRAW) - ethical and compliant
 - **Update Frequency:** Automated collection every 3 hours via GitHub Actions
-- **Database:** Migrating to Supabase for scalability
+- **Database:** Supabase (PostgreSQL + pgvector) - fully migrated and operational
 
 ---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.9 or higher
+- Python 3.11+ (required for modern dependencies)
 - Reddit account (for API credentials)
+- Supabase account (free tier)
 - Git installed
-- 100MB free disk space
 
 ### Installation
 
@@ -75,136 +75,151 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-4. **Configure Reddit API**
-   - Go to https://www.reddit.com/prefs/apps
-   - Create a new app (script type)
-   - Copy the credentials
+4. **Configure environment variables**
 
-5. **Set up environment variables**
+   Create a `.env` file with the following:
+
 ```bash
-# Copy template
-cp .env.example .env
-
-# Edit .env with your credentials:
+# Reddit API (get from https://www.reddit.com/prefs/apps)
 REDDIT_CLIENT_ID=your_client_id
 REDDIT_CLIENT_SECRET=your_client_secret
 REDDIT_USER_AGENT=sentiment_analyzer/1.0
+
+# Supabase (get from https://supabase.com/dashboard)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your_anon_key
 ```
 
 ---
 
 ## 🔄 Running the System
 
-### Update Database with Latest Data (Recommended)
+### Check Database Status
 
-**Single command to update everything:**
+**View current database statistics:**
 ```bash
-python scripts/auto_pipeline.py
+python scripts/check_database.py
 ```
 
-This automated pipeline:
-1. Pulls latest JSON files from GitHub
-2. Imports new posts to database
-3. Runs VADER sentiment analysis on new posts
-4. Displays results summary
+This will show:
+- Total posts in Supabase
+- Posts by subreddit
+- Sentiment distribution
+- Recent collection stats
+- Database growth metrics
 
-**Output:**
-- Shows number of new posts imported
-- Displays sentiment analysis progress
-- Provides sentiment breakdown statistics
+### Test Supabase Connection
 
----
-
-### Individual Commands
-
-**Check database statistics:**
+**Verify your Supabase credentials:**
 ```bash
-python database/check_db.py
+python supabase_db/test_connection.py
 ```
 
-**View sentiment analysis results:**
+### Local Collection (Optional)
+
+**Collect new posts manually:**
 ```bash
-python analyzer/show_results.py
+python collector/github_collector.py
 ```
 
-**Preview random sample of posts:**
-```bash
-python database/preview_data.py
-```
+This runs the same collection script used by GitHub Actions automation.
 
-**Import JSON files manually:**
-```bash
-python scripts/import_from_github.py
-```
+### Monitor Automation
 
-**Run sentiment analysis manually:**
-```bash
-python analyzer/process_posts.py
-```
+The system is **fully automated** via GitHub Actions:
+- Collection runs every 3 hours automatically
+- Posts are inserted directly to Supabase
+- VADER sentiment analysis runs automatically
+- No manual intervention required
+
+**View automation logs:**
+- Check GitHub Actions tab in repository
+- Monitor with `scripts/check_database.py`
 
 ---
 
 ## 📁 Project Structure
 ```
-sentiment-analyzer/
-├── collector/                    # Data collection (Weeks 1-2) ✅
-│   ├── github_collector.py      # GitHub Actions collector
-│   ├── continuous_collector.py  # Alternative local collector
-│   ├── reddit_config.py         # Reddit API configuration
-│   └── scheduler.py             # Collection scheduler
+End-to-end sentiment analyzer/
 │
-├── database/                     # Legacy SQLite utilities ✅
-│   ├── tech_sentiment.db        # SQLite database (migration source)
-│   ├── check_db.py             # Database statistics viewer
-│   └── preview_data.py         # Data quality checker
+├── collector/                         # Data collection (Weeks 1-2) ✅
+│   ├── __init__.py
+│   ├── github_collector.py           # GitHub Actions collector (automated)
+│   ├── continuous_collector.py       # Alternative local collector
+│   ├── supabase_pipeline.py          # Direct Supabase insertion pipeline
+│   ├── reddit_config.py              # Reddit API configuration
+│   └── scheduler.py                  # Collection scheduler
 │
-├── analyzer/                     # Sentiment analysis (Week 3) ✅
-│   ├── process_posts.py        # VADER sentiment processor
-│   ├── show_results.py         # Results visualization
-│   └── test_sentiment_analyzer.py # VADER testing utilities
+├── supabase_db/                       # Supabase database (Week 4) ✅
+│   ├── __init__.py
+│   ├── db_client.py                  # Supabase client wrapper with methods
+│   ├── migrate.py                    # SQLite → Supabase migration script
+│   ├── schema.sql                    # PostgreSQL schema with pgvector
+│   └── test_connection.py            # Connection verification utility
 │
-├── supabase/                     # Cloud database (Week 4) 🔄
-│   ├── migrate.py              # SQLite → Supabase migration
-│   ├── schema.sql              # PostgreSQL schema with pgvector
-│   ├── client.py               # Supabase client wrapper
-│   └── sync_data.py            # Automated data sync from GitHub Actions
+├── embeddings/                        # Vector embeddings (Week 5) 📅
+│   ├── __init__.py
+│   ├── config.py                     # Embedding model configuration
+│   └── generate_embeddings.py        # Create embeddings for posts
 │
-├── embeddings/                   # Vector embeddings (Week 4) 🔄
-│   ├── generate_embeddings.py  # Create embeddings for all posts
-│   ├── update_embeddings.py    # Incremental embedding updates
-│   └── config.py               # Embedding model configuration
+├── analyzer/                          # Sentiment analysis (Week 3) ✅
+│   ├── __init__.py
+│   ├── process_posts.py              # VADER sentiment processor
+│   ├── show_results.py               # Results visualization
+│   └── test_sentiment_analyzer.py    # VADER testing utilities
 │
-├── rag/                          # RAG pipeline (Week 5) 📅
-│   ├── retriever.py            # Semantic search & ranking
-│   ├── generator.py            # LLM integration (Groq API)
-│   ├── pipeline.py             # Full RAG orchestration
-│   └── prompts.py              # Prompt templates
+├── database/                          # Legacy SQLite utilities (archived)
+│   ├── tech_sentiment.db             # Original SQLite database
+│   ├── check_db.py                   # SQLite statistics viewer
+│   └── preview_data.py               # SQLite data quality checker
 │
-├── chat/                         # Chat interface (Week 6) 📅
-│   ├── app.py                  # Streamlit chat UI
-│   ├── components.py           # UI components
-│   └── chat_history.py         # Conversation management
+├── scripts/                           # Automation & monitoring ✅
+│   ├── check_database.py             # Supabase database statistics
+│   ├── log_database_size.py          # Database growth tracking
+│   ├── auto_pipeline.py              # Legacy pipeline (SQLite)
+│   └── import_from_github.py         # Legacy JSON importer
 │
-├── scripts/                      # Automation scripts ✅
-│   ├── auto_pipeline.py        # Complete pipeline orchestrator
-│   └── import_from_github.py   # JSON importer (legacy)
+├── rag/                               # RAG pipeline (Week 5) 📅
+│   └── (empty - to be implemented)
 │
-├── data/collected/               # JSON files from GitHub Actions
-│   └── reddit_posts_*.json     # Timestamped collections (100+ files)
+├── chat/                              # Chat interface (Week 6) 📅
+│   └── (empty - to be implemented)
 │
-├── .github/workflows/            # GitHub Actions automation ✅
-│   ├── collect.yml             # Data collection (every 3 hours)
-│   └── process_pipeline.yml    # Data processing & embeddings (every 6 hours)
+├── data/collected/                    # Legacy JSON files (archived)
+│   └── reddit_posts_*.json           # Historical files (Oct 19 - Nov 2)
 │
-├── .env                          # Secrets (NOT in repo)
-├── .env.example                  # Environment template
-├── .gitignore                    # Git ignore rules
-├── requirements.txt              # Python dependencies
-├── README.md                     # This file
-└── LICENSE                       # MIT License
+├── .github/workflows/                 # GitHub Actions automation ✅
+│   ├── sync_to_supabase.yml          # Data collection → Supabase (every 3 hours)
+│   └── collect.yml.disabled          # Legacy JSON collector (archived)
+│
+├── docs/                              # Documentation
+│   └── (project documentation files)
+│
+├── tests/                             # Unit tests
+│   └── (test files)
+│
+├── config/                            # Configuration files
+│   └── (config files)
+│
+├── logs/                              # Application logs
+│   └── (log files from local runs)
+│
+├── .env                               # Environment variables (NOT in repo)
+├── .env.example                       # Environment variable template
+├── .gitignore                         # Git ignore rules
+├── requirements.txt                   # Python dependencies
+├── CLAUDE.md                          # Project context for Claude Code
+├── SUPABASE_MIGRATION_GUIDE.md        # Migration documentation
+├── README.md                          # This file
+└── LICENSE                            # MIT License
 ```
 
-**Removed folders:** `api/`, `dashboard/`, `preprocessing/`, `utils/` (empty, not needed)
+**Key Changes from Original Plan:**
+- ✅ `supabase_db/` instead of `supabase/` (actual folder name)
+- ✅ `collector/supabase_pipeline.py` - direct insertion to Supabase
+- ✅ Week 4 complete: Database migration fully operational
+- 📅 `rag/` and `chat/` folders exist but are empty (Week 5-6 work)
+- 🗄️ Legacy SQLite files preserved in `database/` for reference
 
 ---
 
@@ -257,13 +272,13 @@ sentiment-analyzer/
 - [x] Modular, maintainable code structure
 - [x] Error handling and logging
 
-### ✅ Week 4 Complete (Nov 1-7, 2025) - Cloud Migration
-- [x] Migrated SQLite to Supabase (PostgreSQL + pgvector)
-- [x] Set up automated GitHub Actions pipeline to Supabase
-- [x] Fixed schema mismatches (feed_type, timestamp format)
-- [x] Implemented deduplication to prevent batch conflicts
-- [x] Database monitoring scripts (check_database.py)
-- [x] Successfully collecting ~900 new posts every 3 hours
+### ✅ Week 4 Complete (Nov 1-7, 2025) - Cloud Migration & Automation
+- [x] Migrated 31,097 posts from SQLite to Supabase (PostgreSQL + pgvector)
+- [x] Set up automated GitHub Actions → Supabase direct insertion pipeline
+- [x] Implemented automated VADER sentiment analysis in pipeline
+- [x] Created database monitoring and statistics tools
+- [x] Achieved stable automation: ~900 new posts every 3 hours (~7,200/day)
+- [x] Database grew from 31K to 38K+ posts during Week 4
 
 ### 📅 Planned (Weeks 5-7 - RAG Development)
 - [ ] **Week 5:** RAG retrieval system + Groq LLM integration
@@ -313,44 +328,87 @@ ALTER TABLE raw_posts ADD COLUMN sentiment_label TEXT;    -- Category label
 
 ---
 
+## 🧬 Vector Embeddings Implementation
+
+### sentence-transformers (all-MiniLM-L6-v2)
+
+**Why This Model?**
+- Fast inference on CPU (no GPU required)
+- Small model size (~80MB download)
+- 384-dimensional vectors (compact storage)
+- Optimized for semantic similarity search
+- Good balance of speed vs quality
+- Perfect for RAG retrieval systems
+
+**Technical Specifications:**
+```python
+Model: sentence-transformers/all-MiniLM-L6-v2
+Vector Dimensions: 384
+Processing Speed: ~1000 posts/minute on CPU
+Storage: ~1.5KB per post (384 floats)
+Similarity Metric: Cosine similarity
+```
+
+**Why Not Other Models?**
+- `all-mpnet-base-v2`: Better quality but 768 dimensions (2x storage, slower)
+- OpenAI `text-embedding-ada-002`: Costs money, requires API calls
+- `all-distilroberta-v1`: Slower inference, 768 dimensions
+- Custom training: No time/resources for university project
+
+**Database Integration:**
+```sql
+-- Vector column in Supabase (pgvector extension)
+embedding vector(384)
+
+-- Fast similarity search index
+CREATE INDEX ON reddit_posts USING ivfflat (embedding vector_cosine_ops);
+```
+
+**Embedding Pipeline (Week 5):**
+1. Load pre-trained model from Hugging Face
+2. Combine title + selftext for each post
+3. Generate 384-dimensional embeddings
+4. Store vectors in Supabase (pgvector column)
+5. Create similarity search index
+6. Enable semantic search for RAG queries
+
+---
+
 ## 🔄 Automated Pipeline
 
-### System Architecture
+### System Architecture (Current - Week 4)
 
 ```
 GitHub Actions (Cloud - Every 3 hours)
     ↓
-Collect Reddit posts → Save as JSON
+1. Collect Reddit posts via PRAW
     ↓
-Commit to GitHub repository
+2. Run VADER sentiment analysis
     ↓
-[YOUR COMPUTER - Run when needed]
+3. Insert directly to Supabase (PostgreSQL)
     ↓
-python scripts/auto_pipeline.py
-    ↓
-    ├─→ Step 1: Pull latest JSON files (git pull)
-    ├─→ Step 2: Import JSON to SQLite (skip duplicates)
-    ├─→ Step 3: Run VADER on new posts
-    └─→ Step 4: Display results summary
-    ↓
-Updated local database with sentiment scores
+    [Supabase Cloud Database]
+    ├─→ 38,000+ posts with sentiment scores
+    ├─→ Automated deduplication (PRIMARY KEY)
+    ├─→ PostgreSQL with pgvector extension
+    └─→ Growing ~900 posts every 3 hours
 ```
 
 ### Why This Architecture?
 
 **Advantages:**
-- ✅ Automated data collection (no manual intervention)
-- ✅ Version-controlled JSON files
-- ✅ Local database (fast, no cloud costs)
-- ✅ One command to update everything
-- ✅ Modular design (easy to maintain)
-- ✅ Cloud-ready (easy to deploy later)
+- ✅ Fully automated (zero manual intervention)
+- ✅ Cloud-native (no local database management)
+- ✅ Scalable (500MB free tier supports ~300K posts)
+- ✅ Direct insertion (no intermediate JSON files)
+- ✅ pgvector ready for semantic search
+- ✅ Accessible from anywhere
 
-**Files Involved:**
-- `collector/github_collector.py` - Runs in GitHub Actions
-- `scripts/import_from_github.py` - Imports JSON to database
-- `analyzer/process_posts.py` - Runs sentiment analysis
-- `scripts/auto_pipeline.py` - Orchestrates everything
+**Key Files:**
+- `collector/supabase_pipeline.py` - Runs in GitHub Actions (collection + sentiment + insertion)
+- `supabase_db/db_client.py` - Supabase client wrapper with helper methods
+- `scripts/check_database.py` - Database monitoring and statistics
+- `scripts/log_database_size.py` - Growth tracking (runs in GitHub Actions)
 
 ---
 
@@ -372,12 +430,12 @@ Updated local database with sentiment scores
 - Completed documentation
 
 **Week 4: Cloud Migration & Automation** ✅ COMPLETE
-- Migrated SQLite → Supabase (PostgreSQL + pgvector)
-- Set up automated GitHub Actions → Supabase pipeline
-- Fixed schema compatibility (timestamps, deduplication)
-- Built database monitoring tools
-- Verified automation: ~900 new posts every 3 hours
-- Database growing from 31K → 38K+ posts during week 4
+- Migrated 31,097 posts from SQLite to Supabase (PostgreSQL + pgvector)
+- Set up automated GitHub Actions → Supabase direct insertion pipeline
+- Implemented automated VADER sentiment analysis in collection pipeline
+- Built database monitoring and statistics tools (check_database.py)
+- Achieved stable automation: ~900 new posts every 3 hours
+- Database grew from 31K to 38K+ posts during Week 4
 
 **Week 5: RAG Pipeline** 📅 PLANNED
 - Implement retrieval system (semantic + metadata filtering)
@@ -403,25 +461,6 @@ Updated local database with sentiment scores
 
 ---
 
-## 📈 Current Results
-
-### Sentiment Distribution (17,479 posts)
-
-**Overall Breakdown:**
-- **Positive:** 8,456 posts (48.4%)
-- **Negative:** 3,512 posts (20.1%)
-- **Neutral:** 5,511 posts (31.5%)
-
-**Top Communities by Volume:**
-1. r/pcmasterrace - 3,031 posts
-2. r/buildapc - 2,951 posts
-3. r/TechSupport - 2,565 posts
-4. r/iphone - 1,708 posts
-5. r/laptops - 1,276 posts
-
-**Analysis Period:** October 19-26, 2025
-
----
 
 ## 🗂️ Database Schema
 
@@ -662,4 +701,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Last Updated:** November 2, 2025
 **Project Status:** Week 4 Complete - Ready for RAG Development ✅
-**Current Dataset:** 32,000+ posts in Supabase with automated sync (growing ~7,200/day)
+**Current Dataset:** 38,000+ posts in Supabase (growing ~7,200/day via automated pipeline)
