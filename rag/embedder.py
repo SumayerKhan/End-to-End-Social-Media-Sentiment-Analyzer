@@ -3,13 +3,8 @@ Query Embedding Module
 Converts user questions into vector embeddings for semantic search
 """
 
-import sys
-from pathlib import Path
 from functools import lru_cache
 from typing import List
-
-# Add parent directory to path for imports
-sys.path.append(str(Path(__file__).parent.parent))
 
 from sentence_transformers import SentenceTransformer
 import numpy as np

@@ -3,12 +3,7 @@ Prompt Templates for RAG Pipeline
 System prompts and template formatting for LLM interactions
 """
 
-import sys
-from pathlib import Path
 from typing import List, Dict, Any
-
-# Add parent directory to path
-sys.path.append(str(Path(__file__).parent.parent))
 
 from rag.config import (
     REQUIRE_SOURCE_CITATION,

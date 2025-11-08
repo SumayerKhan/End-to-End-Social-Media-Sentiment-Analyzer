@@ -4,12 +4,7 @@ Comprehensive RAG Pipeline Testing Script
 Tests all components and validates the complete RAG pipeline with diverse queries
 """
 
-import sys
-from pathlib import Path
 import time
-
-# Add parent directory to path
-sys.path.append(str(Path(__file__).parent.parent))
 
 from rag.pipeline import RAGPipeline, quick_query
 

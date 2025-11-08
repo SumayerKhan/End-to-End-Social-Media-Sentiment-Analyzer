@@ -3,10 +3,23 @@ Consumer Electronics Sentiment Analyzer - Streamlit Chat Interface
 Main entry point for the web application
 """
 
+import os
+import sys
 import streamlit as st
 import time
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
+
+# Diagnostic info for Streamlit Cloud debugging
+if os.getenv("STREAMLIT_SHARING") or os.getenv("STREAMLIT_CLOUD"):
+    print("=" * 60)
+    print("STREAMLIT CLOUD DIAGNOSTICS")
+    print(f"Python: {sys.version}")
+    print(f"CWD: {os.getcwd()}")
+    print(f"GROQ_API_KEY present: {bool(os.getenv('GROQ_API_KEY'))}")
+    print(f"SUPABASE_URL present: {bool(os.getenv('SUPABASE_URL'))}")
+    print(f"SUPABASE_SERVICE_KEY present: {bool(os.getenv('SUPABASE_SERVICE_KEY'))}")
+    print("=" * 60)
 
 # Import RAG pipeline
 from rag.pipeline import RAGPipeline

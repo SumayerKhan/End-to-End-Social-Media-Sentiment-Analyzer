@@ -3,12 +3,7 @@ Response Generator Module
 Combines retrieved posts with LLM to generate answers
 """
 
-import sys
-from pathlib import Path
 from typing import List, Dict, Any, Optional
-
-# Add parent directory to path
-sys.path.append(str(Path(__file__).parent.parent))
 
 from rag.groq_client import generate_completion, generate_completion_streaming
 from rag.prompt_templates import (

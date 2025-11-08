@@ -3,13 +3,8 @@ Vector Retrieval Module
 Searches Supabase for semantically similar posts using vector embeddings
 """
 
-import sys
-from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
-
-# Add parent directory to path
-sys.path.append(str(Path(__file__).parent.parent))
 
 from supabase_db.db_client import get_client
 

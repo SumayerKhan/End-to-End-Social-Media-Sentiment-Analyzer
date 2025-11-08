@@ -3,13 +3,8 @@ RAG Pipeline Orchestrator
 Main class that coordinates the entire RAG pipeline
 """
 
-import sys
-from pathlib import Path
 import time
 from typing import Dict, Any, Optional, List
-
-# Add parent directory to path
-sys.path.append(str(Path(__file__).parent.parent))
 
 from rag.embedder import get_embedding_model, embed_query
 from rag.retriever import retrieve_similar_posts, rerank_by_relevance, get_diverse_posts

@@ -3,14 +3,9 @@ Groq API Client Module
 Handles communication with Groq LLM API for response generation
 """
 
-import sys
-from pathlib import Path
 import time
 from typing import Optional, Generator
 from functools import lru_cache
-
-# Add parent directory to path
-sys.path.append(str(Path(__file__).parent.parent))
 
 from groq import Groq
 
