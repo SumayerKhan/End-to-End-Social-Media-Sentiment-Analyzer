@@ -15,6 +15,8 @@ from rag.embedder import get_embedding_model, embed_query
 from rag.retriever import retrieve_similar_posts, rerank_by_relevance, get_diverse_posts
 from rag.generator import generate_answer, generate_answer_with_sources_formatted
 from rag.groq_client import get_groq_client, test_api_connection
+from rag.query_classifier import classify_query, should_use_rag_pipeline
+from rag.conversational_responses import generate_conversational_response
 from supabase_db.db_client import get_client
 
 from rag.config import (
@@ -118,7 +120,8 @@ class RAGPipeline:
         temperature: float = TEMPERATURE,
         max_tokens: int = MAX_TOKENS,
         rerank: bool = False,
-        diversify: bool = False
+        diversify: bool = False,
+        enable_conversational: bool = True
     ) -> Dict[str, Any]:
         """
         Query the RAG pipeline with a question
@@ -137,6 +140,7 @@ class RAGPipeline:
             max_tokens: Maximum response length
             rerank: Whether to rerank by relevance (combines similarity + engagement)
             diversify: Whether to ensure diversity across subreddits
+            enable_conversational: Enable conversational responses for meta/greeting queries
 
         Returns:
             Dictionary with:
@@ -158,6 +162,39 @@ class RAGPipeline:
         if self.verbose:
             print(f"\n[QUERY] '{question}'")
             print("-" * 60)
+
+        # Step 0: Classify query intent
+        classification = classify_query(question)
+
+        if self.verbose:
+            print(f"[CLASSIFY] Type: {classification['type']}, Confidence: {classification['confidence']:.2f}")
+
+        # Handle conversational queries (meta, greeting, out_of_scope)
+        if enable_conversational and classification['type'] != 'product_sentiment':
+            if self.verbose:
+                print(f"[CONVERSATIONAL] Handling {classification['type']} query")
+
+            result = generate_conversational_response(
+                query_type=classification['type'],
+                question=question,
+                classification_confidence=classification['confidence']
+            )
+
+            # Add classification to metadata
+            result['metadata']['classification'] = classification
+
+            if TRACK_QUERY_TIME:
+                total_query_time = time.time() - query_start
+                result['metadata']['timing'] = {
+                    'total_time': total_query_time
+                }
+
+            return result
+
+        # For product sentiment queries with low confidence, warn but proceed
+        if classification['confidence'] < 0.4:
+            if self.verbose:
+                print(f"[WARNING] Low confidence ({classification['confidence']:.2f}) - proceeding anyway")
 
         # Step 1: Embed query
         if self.verbose:
@@ -188,6 +225,36 @@ class RAGPipeline:
         if self.verbose:
             print(f"[OK] Retrieved {len(posts)} posts in {retrieve_time:.3f}s")
 
+        # Handle case where no posts found - use conversational fallback
+        if not posts and enable_conversational:
+            if self.verbose:
+                print("[NO RESULTS] Using conversational fallback")
+
+            result = generate_conversational_response(
+                query_type='no_results',
+                question=question,
+                additional_context={
+                    'filters': {
+                        'subreddit_filter': subreddit_filter,
+                        'sentiment_filter': sentiment_filter,
+                        'days_ago': days_ago
+                    }
+                }
+            )
+
+            # Add classification and timing
+            result['metadata']['classification'] = classification
+
+            if TRACK_QUERY_TIME:
+                total_query_time = time.time() - query_start
+                result['metadata']['timing'] = {
+                    'embed_time': embed_time,
+                    'retrieve_time': retrieve_time,
+                    'total_time': total_query_time
+                }
+
+            return result
+
         # Optional: Re-rank by relevance
         if rerank and posts:
             if self.verbose:
@@ -216,6 +283,9 @@ class RAGPipeline:
         generate_time = time.time() - generate_start
         if self.verbose:
             print(f"[OK] Answer generated in {generate_time:.3f}s")
+
+        # Add classification to metadata
+        result['metadata']['classification'] = classification
 
         # Add timing metadata
         if TRACK_QUERY_TIME:
