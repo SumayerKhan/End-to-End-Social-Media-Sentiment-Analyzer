@@ -209,8 +209,6 @@ End-to-end sentiment analyzer/
 ├── .env.example                       # Environment variable template
 ├── .gitignore                         # Git ignore rules
 ├── requirements.txt                   # Python dependencies
-├── CLAUDE.md                          # Project context for Claude Code
-├── SUPABASE_MIGRATION_GUIDE.md        # Migration documentation
 ├── README.md                          # This file
 └── LICENSE                            # MIT License
 ```
