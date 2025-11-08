@@ -85,3 +85,5 @@ htmlcov/
 *.tmp
 *.temp
 *.bakproject_structure.txt
+backup-before-cleanup.bundle
+.claude
