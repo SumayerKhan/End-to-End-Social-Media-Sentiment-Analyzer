@@ -4,7 +4,7 @@ Handles communication with Groq LLM API for response generation
 """
 
 import time
-from typing import Optional, Generator
+from typing import Optional, Generator, List, Dict
 from functools import lru_cache
 
 from groq import Groq
@@ -48,19 +48,25 @@ def get_groq_client() -> Groq:
 def generate_completion(
     prompt: str,
     system_prompt: Optional[str] = None,
+    conversation_history: Optional[List[Dict[str, str]]] = None,
     temperature: float = TEMPERATURE,
     max_tokens: int = MAX_TOKENS,
     top_p: float = TOP_P,
     model: str = GROQ_MODEL
 ) -> str:
     """
-    Generate a completion from Groq API
+    Generate a completion from Groq API with optional conversation history
 
-    This is the main function for getting LLM responses.
+    This is the main function for getting LLM responses. Supports multi-turn conversations
+    by accepting conversation history (Perplexity-style follow-ups).
 
     Args:
-        prompt: User prompt/question
+        prompt: User prompt/question (current turn)
         system_prompt: Optional system instructions
+        conversation_history: Optional list of previous messages [{"role": "user/assistant", "content": "..."}]
+                            Should NOT include system prompt (added separately)
+                            Example: [{"role": "user", "content": "Which laptop?"},
+                                     {"role": "assistant", "content": "Based on..."}]
         temperature: Sampling temperature (0-2, lower = more focused)
         max_tokens: Maximum response length
         top_p: Nucleus sampling parameter (0-1)
@@ -69,13 +75,24 @@ def generate_completion(
     Returns:
         Generated text response
 
-    Example:
+    Example (single turn):
         >>> response = generate_completion(
         ...     prompt="What is sentiment analysis?",
         ...     system_prompt="You are a helpful AI assistant."
         ... )
         >>> print(response)
         Sentiment analysis is...
+
+    Example (multi-turn with history):
+        >>> history = [
+        ...     {"role": "user", "content": "Which laptop is best?"},
+        ...     {"role": "assistant", "content": "Based on posts, the Dell XPS..."}
+        ... ]
+        >>> response = generate_completion(
+        ...     prompt="What about cheaper ones?",
+        ...     system_prompt="You are a helpful AI assistant.",
+        ...     conversation_history=history
+        ... )
     """
     # Get cached client
     client = get_groq_client()
@@ -83,12 +100,18 @@ def generate_completion(
     # Build messages
     messages = []
 
+    # 1. Add system prompt (always first)
     if system_prompt:
         messages.append({
             "role": "system",
             "content": system_prompt
         })
 
+    # 2. Add conversation history (previous turns)
+    if conversation_history:
+        messages.extend(conversation_history)
+
+    # 3. Add current user prompt
     messages.append({
         "role": "user",
         "content": prompt

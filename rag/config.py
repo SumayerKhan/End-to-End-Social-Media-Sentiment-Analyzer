@@ -56,7 +56,7 @@ if not GROQ_API_KEY or GROQ_API_KEY == "your_groq_api_key_here":
 GROQ_MODEL = "llama-3.3-70b-versatile"
 
 # Generation parameters
-TEMPERATURE = 0.3  # Lower = more focused, Higher = more creative (0-2)
+TEMPERATURE = 0.15  # Lower = more focused, Higher = more creative (0-2) - Set low for consistency
 MAX_TOKENS = 1024  # Maximum response length
 TOP_P = 0.9  # Nucleus sampling (0-1)
 

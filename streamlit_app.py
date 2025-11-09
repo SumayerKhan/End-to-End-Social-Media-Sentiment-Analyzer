@@ -437,13 +437,27 @@ def main():
 
                 # Query pipeline
                 try:
+                    # Build conversation history (last 6 turns = 3 Q&A pairs)
+                    # Format: [{"role": "user/assistant", "content": "..."}, ...]
+                    conversation_history = []
+                    if len(st.session_state.messages) > 1:
+                        # Get last 6 messages (excluding current user input)
+                        # This gives us up to 3 Q&A pairs of context
+                        recent_messages = st.session_state.messages[-7:-1]  # -7 to -1 gives us last 6
+                        for msg in recent_messages:
+                            conversation_history.append({
+                                "role": msg["role"],
+                                "content": msg["content"]
+                            })
+
                     result = st.session_state.pipeline.query(
                         question=user_input,
                         subreddit_filter=st.session_state.selected_subreddit,
                         sentiment_filter=st.session_state.selected_sentiment,
                         days_ago=st.session_state.selected_days,
                         style=st.session_state.response_style,
-                        enable_conversational=True
+                        enable_conversational=True,
+                        conversation_history=conversation_history if conversation_history else None
                     )
 
                     # Display answer

@@ -30,15 +30,16 @@ def generate_answer(
     style: str = RESPONSE_STYLE,
     temperature: float = TEMPERATURE,
     max_tokens: int = MAX_TOKENS,
-    max_context_posts: int = MAX_CONTEXT_POSTS
+    max_context_posts: int = MAX_CONTEXT_POSTS,
+    conversation_history: Optional[List[Dict[str, str]]] = None
 ) -> Dict[str, Any]:
     """
-    Generate an answer to a question using retrieved posts
+    Generate an answer to a question using retrieved posts with optional conversation history
 
     This is the core function that:
     1. Builds context from retrieved posts
     2. Formats prompts
-    3. Calls LLM
+    3. Calls LLM with conversation history (for follow-up questions)
     4. Returns structured response
 
     Args:
@@ -48,6 +49,9 @@ def generate_answer(
         temperature: LLM temperature
         max_tokens: Maximum response length
         max_context_posts: Maximum posts to include in context
+        conversation_history: Optional list of previous conversation turns
+                            [{"role": "user/assistant", "content": "..."}]
+                            Enables Perplexity-style follow-up questions
 
     Returns:
         Dictionary with:
@@ -55,11 +59,18 @@ def generate_answer(
         - sources: List of source posts used
         - metadata: Additional information (tokens, citations, etc.)
 
-    Example:
+    Example (single turn):
         >>> posts = retrieve_similar_posts(query_embedding, top_k=10)
         >>> result = generate_answer("What do people think about iPhone?", posts)
         >>> print(result['answer'])
         Based on the discussions, users generally...
+
+    Example (follow-up with history):
+        >>> history = [
+        ...     {"role": "user", "content": "Which laptop is best?"},
+        ...     {"role": "assistant", "content": "Dell XPS is popular..."}
+        ... ]
+        >>> result = generate_answer("What about cheaper ones?", posts, conversation_history=history)
     """
     if VERBOSE:
         print(f"[GENERATOR] Generating answer for: '{question[:80]}...'")
@@ -106,12 +117,16 @@ def generate_answer(
         answer = generate_completion(
             prompt=user_prompt,
             system_prompt=system_prompt,
+            conversation_history=conversation_history,
             temperature=temperature,
             max_tokens=max_tokens
         )
 
         if VERBOSE:
-            print(f"[GENERATOR] Answer generated ({len(answer)} characters)")
+            if conversation_history:
+                print(f"[GENERATOR] Answer generated with history ({len(answer)} characters)")
+            else:
+                print(f"[GENERATOR] Answer generated ({len(answer)} characters)")
 
     except Exception as e:
         print(f"[GENERATOR] Error generating answer: {e}")

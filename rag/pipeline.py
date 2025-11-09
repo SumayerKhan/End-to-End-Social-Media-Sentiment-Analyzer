@@ -116,10 +116,11 @@ class RAGPipeline:
         max_tokens: int = MAX_TOKENS,
         rerank: bool = False,
         diversify: bool = False,
-        enable_conversational: bool = True
+        enable_conversational: bool = True,
+        conversation_history: Optional[List[Dict[str, str]]] = None
     ) -> Dict[str, Any]:
         """
-        Query the RAG pipeline with a question
+        Query the RAG pipeline with a question (supports conversation history for follow-ups)
 
         This is the MAIN method you'll use!
 
@@ -136,6 +137,9 @@ class RAGPipeline:
             rerank: Whether to rerank by relevance (combines similarity + engagement)
             diversify: Whether to ensure diversity across subreddits
             enable_conversational: Enable conversational responses for meta/greeting queries
+            conversation_history: Optional list of previous conversation turns for context
+                                [{"role": "user/assistant", "content": "..."}]
+                                Enables Perplexity-style follow-up questions
 
         Returns:
             Dictionary with:
@@ -143,10 +147,17 @@ class RAGPipeline:
             - sources: Source posts
             - metadata: Query metadata (time, posts used, etc.)
 
-        Example:
+        Example (single turn):
             >>> result = pipeline.query("What do people think about iPhone 15?")
             >>> print(result['answer'])
             Based on Reddit discussions, users generally...
+
+        Example (follow-up with history):
+            >>> history = [
+            ...     {"role": "user", "content": "Which laptop is best?"},
+            ...     {"role": "assistant", "content": "Dell XPS is popular..."}
+            ... ]
+            >>> result = pipeline.query("What about cheaper ones?", conversation_history=history)
 
             >>> print(f"Used {len(result['sources'])} sources")
             Used 10 sources
@@ -272,7 +283,8 @@ class RAGPipeline:
             retrieved_posts=posts,
             style=style,
             temperature=temperature,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
+            conversation_history=conversation_history
         )
 
         generate_time = time.time() - generate_start
